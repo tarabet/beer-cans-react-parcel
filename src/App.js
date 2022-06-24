@@ -1,16 +1,14 @@
 import {Routes, Route} from "react-router-dom";
-import { Home } from "./components/Home";
-import { About } from "./components/About";
-import { Nav } from "./components/Nav";
+import { Form } from "./components/Form";
+import { History } from "./components/History";
 
 const App = () => {
-  return <>
-    <Nav />
-    <Routes>
-      <Route path="/" element={<Home />}/>
-      <Route path="about" element={<About />}/>
-    </Routes>
-  </>;
+    return (
+        <Routes>
+            <Route path="/" element={<Form />} />
+            <Route path="form" element={<Form />} />
+            <Route path="history" element={<History />} />
+        </Routes>)
 }
 
 export default App
