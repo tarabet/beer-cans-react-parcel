@@ -72,12 +72,11 @@ const mdTheme = createTheme();
 
 export const Layout = ({ children }) => {
     const { pathname } = useLocation();
+
     const [open, setOpen] = React.useState(true);
     const toggleDrawer = () => {
         setOpen(!open);
     };
-
-    console.log(location)
 
     return (
         <ThemeProvider theme={mdTheme}>
