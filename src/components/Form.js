@@ -65,7 +65,7 @@ export const Form = () => {
                             />
                         </Grid>
                     </Grid>
-                    <Box sx={{ border: 1 }} mt={2} p={2}>
+                    <Box sx={{ border: 1, borderRadius: '5px' }} mt={2} p={2}>
                         <Grid container spacing={2}>
                             <Grid item xs={12} sm={12}>
                                 <TextField
