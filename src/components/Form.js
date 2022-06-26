@@ -258,15 +258,16 @@ export const Form = () => {
                                     display: "flex",
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    flexDirection: 'column' }}
+                                    flexDirection: 'column'
+                                }}
                             >
                                 <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
                                     <Box sx={{ width: '25%' }}><Typography>Exercise</Typography></Box>
                                     <Box sx={{ width: '50%' }}><Typography>Url</Typography></Box>
                                     <Box sx={{ width: '25%' }}><Typography>Focus</Typography></Box>
                                 </Box>
-                                {dynamicExercisesList.map(item => (
-                                    <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
+                                {dynamicExercisesList.map((item, i) => (
+                                    <Box key={i} fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
                                         <Box sx={{ width: '25%' }}><Typography>{item.exercise}</Typography></Box>
                                         <Box sx={{ width: '50%' }}><Typography>{item.url}</Typography></Box>
                                         <Box sx={{ width: '25%' }}><Typography>{item.focus}</Typography></Box>
@@ -281,6 +282,79 @@ export const Form = () => {
                             </Grid>
                             <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                                 <Typography align="center" variant="h5">Game Skills</Typography>
+                            </Grid>
+                            <Grid
+                                item
+                                xs={2}
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: 1,
+                                    borderColor: 'black',
+                                }}>
+                                <Box sx={{ display: 'flex', flex: 1, width: 1, alignItems: 'center', justifyContent: 'center', border: 1 }}><Typography>Dropdown</Typography></Box>
+                                <Box sx={{ display: 'flex', flex: 1, width: 1, alignItems: 'center', justifyContent: 'center', border: 1 }}><Typography>Dropdown</Typography></Box>
+                            </Grid>
+                            <Grid
+                                item
+                                xs={6}
+                                sx={{
+                                    border: 1,
+                                    borderColor: 'black',
+                                    display: "flex",
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'column'
+                                }}
+                            >
+                                <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
+                                    <Box sx={{ width: '25%' }}><Typography>Exercise</Typography></Box>
+                                    <Box sx={{ width: '50%' }}><Typography>Url</Typography></Box>
+                                    <Box sx={{ width: '25%' }}><Typography>Focus</Typography></Box>
+                                </Box>
+                                {dynamicExercisesList.map((item, i) => (
+                                    <Box key={i} fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
+                                        <Box sx={{ width: '25%' }}><Typography>{item.exercise}</Typography></Box>
+                                        <Box sx={{ width: '50%' }}><Typography>{item.url}</Typography></Box>
+                                        <Box sx={{ width: '25%' }}><Typography>{item.focus}</Typography></Box>
+                                    </Box>
+                                ))}
+                            </Grid>
+                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography>Dropdown</Typography>
+                            </Grid>
+                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography>Dropdown</Typography>
+                            </Grid>
+                            <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography align="center" variant="h5">Athlete Attitudes</Typography>
+                            </Grid>
+                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography>Dropdown</Typography>
+                            </Grid>
+                            <Grid
+                                item
+                                xs={6}
+                                sx={{
+                                    border: 1,
+                                    borderColor: 'black',
+                                    display: "flex",
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'column'
+                                }}
+                            >
+                                <Box sx={{ width: 1, border: 1, height: '64px' }}><Typography>1. Textarea</Typography></Box>
+                                <Box sx={{ width: 1, border: 1, height: '64px' }}><Typography>1. Textarea</Typography></Box>
+                                <Box sx={{ width: 1, border: 1, height: '64px' }}><Typography>1. Textarea</Typography></Box>
+                            </Grid>
+                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography>Dropdown</Typography>
+                            </Grid>
+                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography>Dropdown</Typography>
                             </Grid>
                         </Grid>
                     </Box>
