@@ -7,6 +7,8 @@ a {
     color: inherit;
 }
 
-.layout {
-    background-color: azure;
+.flex-centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

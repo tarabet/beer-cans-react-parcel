@@ -1,9 +1,16 @@
+import axios from "axios";
+
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import {Button, FormControl, InputAdornment, InputLabel, MenuItem, Select, TextField} from "@mui/material";
 import { useForm, Controller} from "react-hook-form";
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import {useEffect, useState} from "react";
+
+// Set necessary url in .env file
+// Is not stored in codebase for security reasons (public repo)
+const FORM_DATA_URL = process.env.FORM_DATA_URL;
 
 const yearItems = [
     { value: 2, label: "2" },
@@ -44,11 +51,60 @@ const dynamicExercisesList = [
     },
 ]
 
+const getUniqueList = ({ gameSkills }, columnName) => {
+    const columnIndex = gameSkills[0].indexOf(columnName)
+
+    return gameSkills.reduce((acc, item, index) => {
+        const name = item[columnIndex];
+
+        if (index === 0 || !name) return acc;
+
+        if (acc.indexOf(name) === -1) {
+            acc.push(name)
+        }
+
+        return acc;
+    }, []);
+}
+
+const getPhysicalPerformanceArray = ({ physicalPerformance }) => {
+    return physicalPerformance.reduce((acc, itemArr) => {
+        return itemArr.forEach(item => {
+            debugger
+            if (acc.indexOf(item) === -1) {
+                acc.push(item)
+            }
+
+            return acc;
+        })
+    }, [])
+}
+
+
 export const Form = () => {
     const { register, handleSubmit, reset, watch, formState, control } = useForm();
     const onSubmit = data => console.log(data);
 
-    console.log("Watch:", watch())
+    const [formData, setFormData] = useState(null);
+    const [sportsList, setSportsList] = useState([]);
+    const [physicalPerformanceList, setPhysicalPerformanceList] = useState([]);
+
+    useEffect(() => {
+        axios.get(FORM_DATA_URL).then(resp => setFormData(resp.data))
+    }, []);
+
+    useEffect(() => {
+        if (formData) {
+            setSportsList(getUniqueList(formData, 'Sport'));
+
+            // TODO not working yet
+            // setPhysicalPerformanceList(getPhysicalPerformanceArray(formData));
+        }
+    }, [ formData ])
+
+    console.log("Watch:", watch());
+    console.log("FormData:", formData);
+    console.log("PhysicalPerfList:", physicalPerformanceList);
 
     return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -106,13 +162,25 @@ export const Form = () => {
                                 />
                             </Grid>
                             <Grid item xs={12} sm={6}>
-                                <TextField
-                                    required
-                                    fullWidth
-                                    id="sport"
-                                    label="Sport"
+                                <Controller
                                     name="sport"
-                                />
+                                    control={control}
+                                    defaultValue=""
+                                    render={({ field }) => (
+                                        <FormControl fullWidth>
+                                            <InputLabel id="sport-select-label">Sport</InputLabel>
+                                            <Select
+                                                {...field}
+                                                labelId="sport-select-label"
+                                                required
+                                                fullWidth
+                                                label="Sport"
+                                            >
+                                                {sportsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                    )}
+                                    />
                             </Grid>
                         </Grid>
                     </Box>
@@ -230,24 +298,43 @@ export const Form = () => {
                     </Box>
                     <Box sx={{ textAlign: 'center' }} mt={2} mb={2}>
                         <Grid container>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={2} className='flex-centered'>
                                 <Typography>Work Ons</Typography>
                             </Grid>
-                            <Grid item xs={6} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={6} className='flex-centered'>
                                 <Typography>Actions</Typography>
                             </Grid>
-                            <Grid item xs={4} sx={{ border: 1, borderColor: 'black' }}>
+                            <Grid item xs={4}>
                                 <Box><Typography>Self Reflection</Typography></Box>
                                 <Box sx={{ display: 'flex' }}>
-                                    <Box sx={{ flexGrow: 1 }}>Pre</Box>
-                                    <Box sx={{ flexGrow: 1 }}>Post</Box>
+                                    <Box sx={{ flex: 1 }}>Pre</Box>
+                                    <Box sx={{ flex: 1 }}>Post</Box>
                                 </Box>
                             </Grid>
-                            <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={2} />
+                            <Grid item xs={6} className='flex-centered'>
                                 <Typography align="center" variant="h5">Physical Performance</Typography>
                             </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
+                            <Grid item xs={4} />
+                            <Grid item xs={2} className="flex-centered">
+                                <Controller
+                                    name="Ability"
+                                    control={control}
+                                    defaultValue=""
+                                    render={({ field }) => (
+                                        <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                                            <InputLabel id="ability-select-label">Ability</InputLabel>
+                                            <Select
+                                                {...field}
+                                                labelId="ability-select-label"
+                                                required
+                                                fullWidth
+                                            >
+                                                {sportsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                    )}
+                                />
                             </Grid>
                             <Grid
                                 item
