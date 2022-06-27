@@ -1,4 +1,5 @@
 import axios from "axios";
+import flatten from 'lodash/flatten'
 
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
@@ -7,16 +8,14 @@ import {Button, FormControl, InputAdornment, InputLabel, MenuItem, Select, TextF
 import { useForm, Controller} from "react-hook-form";
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import {useEffect, useState} from "react";
+import Link from "@mui/material/Link";
 
 // Set necessary url in .env file
 // Is not stored in codebase for security reasons (public repo)
 const FORM_DATA_URL = process.env.FORM_DATA_URL;
+const FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL = process.env.FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL;
 
-const yearItems = [
-    { value: 2, label: "2" },
-    { value: 3, label: "3" },
-    { value: 4, label: "4" }
-]
+const yearsList = [ 7, 8, 9, 10, 11, 12 ]
 
 const dynamicExercisesList = [
     {
@@ -68,26 +67,51 @@ const getUniqueList = ({ gameSkills }, columnName) => {
 }
 
 const getPhysicalPerformanceArray = ({ physicalPerformance }) => {
-    return physicalPerformance.reduce((acc, itemArr) => {
-        return itemArr.forEach(item => {
-            debugger
-            if (acc.indexOf(item) === -1) {
-                acc.push(item)
+    const flatArr = flatten(physicalPerformance);
+
+    return flatArr.reduce((acc, item) => {
+        if (!!item && acc.indexOf(item) === -1) {
+            acc.push(item)
+        }
+
+        return acc;
+    }, [])
+}
+
+const getAbilitiesExercisesList = exercisesList => {
+    return exercisesList.reduce((acc, itemArr) => {
+        let itemArrAccIndex = 0;
+
+        const supportedFieldsArr = ['exercise', 'url', 'focus']
+
+        const item = itemArr.reduce((itemArrAcc, item) => {
+            if(!!item && (item !== '' && item !== '#N/A')) {
+                itemArrAcc[supportedFieldsArr[itemArrAccIndex]] = item;
+                itemArrAccIndex += 1
             }
 
-            return acc;
-        })
+            return itemArrAcc;
+        }, {})
+
+        if (Object.keys(item).length === supportedFieldsArr.length) {
+            acc.push(item);
+        }
+
+        return acc;
     }, [])
 }
 
 
 export const Form = () => {
-    const { register, handleSubmit, reset, watch, formState, control } = useForm();
+    const { handleSubmit, reset, watch, formState, control } = useForm();
     const onSubmit = data => console.log(data);
 
     const [formData, setFormData] = useState(null);
     const [sportsList, setSportsList] = useState([]);
     const [physicalPerformanceList, setPhysicalPerformanceList] = useState([]);
+    const [abilitiesExercisesList, setAbilitiesExercisesList] = useState([]);
+
+    const watchAbility = watch('ability');
 
     useEffect(() => {
         axios.get(FORM_DATA_URL).then(resp => setFormData(resp.data))
@@ -96,15 +120,20 @@ export const Form = () => {
     useEffect(() => {
         if (formData) {
             setSportsList(getUniqueList(formData, 'Sport'));
-
-            // TODO not working yet
-            // setPhysicalPerformanceList(getPhysicalPerformanceArray(formData));
+            setPhysicalPerformanceList(getPhysicalPerformanceArray(formData));
         }
     }, [ formData ])
 
+    useEffect(() => {
+        if (!!watchAbility) {
+            axios.get(FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL + watchAbility)
+            .then(resp => setAbilitiesExercisesList(getAbilitiesExercisesList(resp.data.exercise)));
+        }
+    }, [ watchAbility ]);
+
     console.log("Watch:", watch());
     console.log("FormData:", formData);
-    console.log("PhysicalPerfList:", physicalPerformanceList);
+    console.log("abilitiesExercisesList", abilitiesExercisesList);
 
     return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -137,7 +166,7 @@ export const Form = () => {
                                                 fullWidth
                                                 label="Year"
                                             >
-                                                {yearItems.map(item => <MenuItem key={item.value} value={item.value}>{item.label}</MenuItem>)}
+                                                {yearsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
                                             </Select>
                                         </FormControl>
                                     )}
@@ -318,7 +347,7 @@ export const Form = () => {
                             <Grid item xs={4} />
                             <Grid item xs={2} className="flex-centered">
                                 <Controller
-                                    name="Ability"
+                                    name="ability"
                                     control={control}
                                     defaultValue=""
                                     render={({ field }) => (
@@ -330,7 +359,7 @@ export const Form = () => {
                                                 required
                                                 fullWidth
                                             >
-                                                {sportsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                {physicalPerformanceList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
                                             </Select>
                                         </FormControl>
                                     )}
@@ -338,7 +367,7 @@ export const Form = () => {
                             </Grid>
                             <Grid
                                 item
-                                xs={6}
+                                xs={8}
                                 sx={{
                                     border: 1,
                                     borderColor: 'black',
@@ -349,22 +378,22 @@ export const Form = () => {
                                 }}
                             >
                                 <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
-                                    <Box sx={{ width: '25%' }}><Typography>Exercise</Typography></Box>
-                                    <Box sx={{ width: '50%' }}><Typography>Url</Typography></Box>
-                                    <Box sx={{ width: '25%' }}><Typography>Focus</Typography></Box>
+                                    <Box sx={{ width: '40%' }}><Typography>Exercise</Typography></Box>
+                                    <Box sx={{ width: '20%' }}><Typography>Url</Typography></Box>
+                                    <Box sx={{ width: '40%' }}><Typography>Focus</Typography></Box>
                                 </Box>
-                                {dynamicExercisesList.map((item, i) => (
+                                {abilitiesExercisesList.map((item, i) => (
                                     <Box key={i} fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
-                                        <Box sx={{ width: '25%' }}><Typography>{item.exercise}</Typography></Box>
-                                        <Box sx={{ width: '50%' }}><Typography>{item.url}</Typography></Box>
-                                        <Box sx={{ width: '25%' }}><Typography>{item.focus}</Typography></Box>
+                                        <Box sx={{ width: '40%' }}><Typography variant="body2" gutterBottom>{item.exercise}</Typography></Box>
+                                        <Box sx={{ width: '20%' }}><Link target="_blank" href={item.url}>Link</Link></Box>
+                                        <Box sx={{ width: '40%' }}><Typography variant="body2" gutterBottom>{item.focus}</Typography></Box>
                                     </Box>
                                 ))}
                             </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                                 <Typography>Dropdown</Typography>
                             </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                                 <Typography>Dropdown</Typography>
                             </Grid>
                             <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
