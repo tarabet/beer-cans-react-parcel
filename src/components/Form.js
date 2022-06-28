@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import axios from "axios";
 import flatten from 'lodash/flatten'
 
@@ -101,17 +103,33 @@ const getAbilitiesExercisesList = exercisesList => {
     }, [])
 }
 
+const usePrevious = (value) => {
+    const ref = useRef();
+
+    useEffect(() => {
+        ref.current = value;
+    });
+
+    return ref.current;
+}
 
 export const Form = () => {
-    const { handleSubmit, reset, watch, formState, control } = useForm();
+    const { handleSubmit, reset, watch, formState, control, getValues } = useForm();
     const onSubmit = data => console.log(data);
+
+    const { sport, ability } = getValues();
+
+    // Save previous values to trigger re-fetch if value really changed
+    const prevValues = usePrevious({prevSportValue: sport, prevAbilityValue: ability});
 
     const [formData, setFormData] = useState(null);
     const [sportsList, setSportsList] = useState([]);
     const [physicalPerformanceList, setPhysicalPerformanceList] = useState([]);
     const [abilitiesExercisesList, setAbilitiesExercisesList] = useState([]);
+    const [classificationList, setClassificationList] = useState([]);
 
     const watchAbility = watch('ability');
+    const watchSport = watch('sport');
 
     useEffect(() => {
         axios.get(FORM_DATA_URL).then(resp => setFormData(resp.data))
@@ -125,11 +143,19 @@ export const Form = () => {
     }, [ formData ])
 
     useEffect(() => {
-        if (!!watchAbility) {
-            axios.get(FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL + watchAbility)
-            .then(resp => setAbilitiesExercisesList(getAbilitiesExercisesList(resp.data.exercise)));
+        if (prevValues) {
+            const { prevSportValue, prevAbilityValue } = prevValues;
+
+            if (!!watchAbility && watchAbility !== prevAbilityValue) {
+                axios.get(FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL + watchAbility)
+                .then(resp => setAbilitiesExercisesList(getAbilitiesExercisesList(resp.data.exercise)));
+            }
+
+            if (!!watchSport && watchSport !== prevSportValue) {
+                console.log("Build List!")
+            }
         }
-    }, [ watchAbility ]);
+    }, [ watchAbility, watchSport ]);
 
     console.log("Watch:", watch());
     console.log("FormData:", formData);
@@ -330,21 +356,19 @@ export const Form = () => {
                             <Grid item xs={2} className='flex-centered'>
                                 <Typography>Work Ons</Typography>
                             </Grid>
-                            <Grid item xs={6} className='flex-centered'>
+                            <Grid item xs={8} className='flex-centered'>
                                 <Typography>Actions</Typography>
                             </Grid>
-                            <Grid item xs={4}>
+                            <Grid item xs={2}>
                                 <Box><Typography>Self Reflection</Typography></Box>
                                 <Box sx={{ display: 'flex' }}>
                                     <Box sx={{ flex: 1 }}>Pre</Box>
                                     <Box sx={{ flex: 1 }}>Post</Box>
                                 </Box>
                             </Grid>
-                            <Grid item xs={2} />
-                            <Grid item xs={6} className='flex-centered'>
+                            <Grid item xs={12} className='flex-centered' mt={2}>
                                 <Typography align="center" variant="h5">Physical Performance</Typography>
                             </Grid>
-                            <Grid item xs={4} />
                             <Grid item xs={2} className="flex-centered">
                                 <Controller
                                     name="ability"
@@ -396,35 +420,52 @@ export const Form = () => {
                             <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                                 <Typography>Dropdown</Typography>
                             </Grid>
-                            <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={12} className="flex-centered" mt={2}>
                                 <Typography align="center" variant="h5">Game Skills</Typography>
                             </Grid>
-                            <Grid
-                                item
-                                xs={2}
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: 1,
-                                    borderColor: 'black',
-                                }}>
-                                <Box sx={{ display: 'flex', flex: 1, width: 1, alignItems: 'center', justifyContent: 'center', border: 1 }}><Typography>Dropdown</Typography></Box>
-                                <Box sx={{ display: 'flex', flex: 1, width: 1, alignItems: 'center', justifyContent: 'center', border: 1 }}><Typography>Dropdown</Typography></Box>
+                            <Grid item className="flex-centered" xs={2} sx={{ flexDirection: 'column' }}>
+                                <Box className="flex-centered" sx={{ flex: 1, width: 1 }}>
+                                    <Controller
+                                        name="classification"
+                                        control={control}
+                                        defaultValue=""
+                                        render={({ field }) => (
+                                            <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                                                <InputLabel id="classification-select-label">Classification</InputLabel>
+                                                <Select
+                                                    {...field}
+                                                    labelId="classification-select-label"
+                                                    required
+                                                    fullWidth
+                                                >
+                                                    {classificationList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                </Select>
+                                            </FormControl>
+                                        )}
+                                    />
+                                </Box>
+                                <Box className="flex-centered" sx={{ flex: 1, width: 1 }}>
+                                    <Controller
+                                        name="quality"
+                                        control={control}
+                                        defaultValue=""
+                                        render={({ field }) => (
+                                            <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                                                <InputLabel id="quality-select-label">Quality</InputLabel>
+                                                <Select
+                                                    {...field}
+                                                    labelId="quality-select-label"
+                                                    required
+                                                    fullWidth
+                                                >
+                                                    {classificationList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                </Select>
+                                            </FormControl>
+                                        )}
+                                    />
+                                </Box>
                             </Grid>
-                            <Grid
-                                item
-                                xs={6}
-                                sx={{
-                                    border: 1,
-                                    borderColor: 'black',
-                                    display: "flex",
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'column'
-                                }}
-                            >
+                            <Grid item className="flex-centered" xs={8} sx={{ flexDirection: 'column'}}>
                                 <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
                                     <Box sx={{ width: '25%' }}><Typography>Exercise</Typography></Box>
                                     <Box sx={{ width: '50%' }}><Typography>Url</Typography></Box>
@@ -438,10 +479,10 @@ export const Form = () => {
                                     </Box>
                                 ))}
                             </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                                 <Typography>Dropdown</Typography>
                             </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
+                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                                 <Typography>Dropdown</Typography>
                             </Grid>
                             <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
