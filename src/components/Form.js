@@ -6,7 +6,16 @@ import flatten from 'lodash/flatten'
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import {Button, FormControl, InputAdornment, InputLabel, MenuItem, Select, TextField} from "@mui/material";
+import {
+    Button,
+    CircularProgress,
+    FormControl,
+    InputAdornment,
+    InputLabel,
+    MenuItem,
+    Select,
+    TextField
+} from "@mui/material";
 import { useForm, Controller} from "react-hook-form";
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import {useEffect, useState} from "react";
@@ -16,6 +25,7 @@ import Link from "@mui/material/Link";
 // Is not stored in codebase for security reasons (public repo)
 const FORM_DATA_URL = process.env.FORM_DATA_URL;
 const FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL = process.env.FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL;
+const FORM_DATA_TEST_URL = process.env.FORM_DATA_TEST_URL;
 
 const yearsList = [ 7, 8, 9, 10, 11, 12 ]
 
@@ -52,51 +62,40 @@ const dynamicExercisesList = [
     },
 ]
 
-const getUniqueList = ({ gameSkills }, columnName) => {
-    const columnIndex = gameSkills[0].indexOf(columnName)
+const getUniqueList = (formData, columnName) => {
+    return formData.reduce((acc, item, index) => {
+        const itemName = item[columnName];
 
-    return gameSkills.reduce((acc, item, index) => {
-        const name = item[columnIndex];
+        if (!itemName) return acc;
 
-        if (index === 0 || !name) return acc;
-
-        if (acc.indexOf(name) === -1) {
-            acc.push(name)
+        if (acc.indexOf(itemName) === -1) {
+            acc.push(itemName)
         }
 
         return acc;
     }, []);
 }
 
-const getPhysicalPerformanceArray = ({ physicalPerformance }) => {
-    const flatArr = flatten(physicalPerformance);
-
-    return flatArr.reduce((acc, item) => {
-        if (!!item && acc.indexOf(item) === -1) {
-            acc.push(item)
+const getSecondLevelUniqueList = (formData, firstLevelFilterColumn, firstLevelFilterValue, columnToFilter) => {
+    return formData.reduce((acc, itemArr) => {
+        if (itemArr[firstLevelFilterColumn] === firstLevelFilterValue && acc.indexOf(itemArr[columnToFilter]) === -1) {
+            acc.push(itemArr[columnToFilter])
         }
 
         return acc;
     }, [])
 }
 
-const getAbilitiesExercisesList = exercisesList => {
-    return exercisesList.reduce((acc, itemArr) => {
-        let itemArrAccIndex = 0;
+const buildBeerTypeByRegionDataList = (formData, region, type) => {
+    return formData.reduce((acc, item) => {
+        const beerData = {};
 
-        const supportedFieldsArr = ['exercise', 'url', 'focus']
+        if (item['Region'] === region && item['Type'] === type) {
+            beerData['name'] = item['Name'];
+            beerData['degree'] = item['Degree (%)'];
+            beerData['volume'] = item['Volume (ml)'];
 
-        const item = itemArr.reduce((itemArrAcc, item) => {
-            if(!!item && (item !== '' && item !== '#N/A')) {
-                itemArrAcc[supportedFieldsArr[itemArrAccIndex]] = item;
-                itemArrAccIndex += 1
-            }
-
-            return itemArrAcc;
-        }, {})
-
-        if (Object.keys(item).length === supportedFieldsArr.length) {
-            acc.push(item);
+            acc.push(beerData);
         }
 
         return acc;
@@ -117,49 +116,51 @@ export const Form = () => {
     const { handleSubmit, reset, watch, formState, control, getValues } = useForm();
     const onSubmit = data => console.log(data);
 
-    const { sport, ability } = getValues();
+    const { region, type } = getValues();
 
     // Save previous values to trigger re-fetch if value really changed
-    const prevValues = usePrevious({prevSportValue: sport, prevAbilityValue: ability});
+    const prevValues = usePrevious({ prevRegionValue: region, prevTypeValue: type });
 
+    const [formDataLoading, setFormDataLoading] = useState(true);
     const [formData, setFormData] = useState(null);
-    const [sportsList, setSportsList] = useState([]);
-    const [physicalPerformanceList, setPhysicalPerformanceList] = useState([]);
-    const [abilitiesExercisesList, setAbilitiesExercisesList] = useState([]);
+    const [regionsList, setRegionsList] = useState([]);
+    const [beerTypesList, setBeerTypesList] = useState([]);
+    const [beerDataByTypeAndRegion, setBeerDataByTypeAndRegion] = useState([]);
     const [classificationList, setClassificationList] = useState([]);
 
-    const watchAbility = watch('ability');
-    const watchSport = watch('sport');
+    const watchType = watch('type');
+    const watchRegion = watch('region');
 
     useEffect(() => {
-        axios.get(FORM_DATA_URL).then(resp => setFormData(resp.data))
+        axios.get(FORM_DATA_TEST_URL).then(resp => {
+            setFormDataLoading(false);
+            setFormData(resp.data)
+        })
     }, []);
 
     useEffect(() => {
         if (formData) {
-            setSportsList(getUniqueList(formData, 'Sport'));
-            setPhysicalPerformanceList(getPhysicalPerformanceArray(formData));
+            setRegionsList(getUniqueList(formData, 'Region'));
         }
     }, [ formData ])
 
     useEffect(() => {
         if (prevValues) {
-            const { prevSportValue, prevAbilityValue } = prevValues;
+            const { prevRegionValue, prevTypeValue } = prevValues;
 
-            if (!!watchAbility && watchAbility !== prevAbilityValue) {
-                axios.get(FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL + watchAbility)
-                .then(resp => setAbilitiesExercisesList(getAbilitiesExercisesList(resp.data.exercise)));
+            if (!!watchType && watchType !== prevTypeValue) {
+                setBeerDataByTypeAndRegion(buildBeerTypeByRegionDataList(formData, watchRegion, watchType));
             }
 
-            if (!!watchSport && watchSport !== prevSportValue) {
-                console.log("Build List!")
+            if (!!watchRegion && watchRegion !== prevRegionValue) {
+                setBeerTypesList(getSecondLevelUniqueList(formData, 'Region', watchRegion, 'Type'))
             }
         }
-    }, [ watchAbility, watchSport ]);
+    }, [ watchType, watchRegion ]);
 
     console.log("Watch:", watch());
     console.log("FormData:", formData);
-    console.log("abilitiesExercisesList", abilitiesExercisesList);
+    console.log("beerDataByTypeAndRegion", beerDataByTypeAndRegion);
 
     return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -202,10 +203,9 @@ export const Form = () => {
                                 <Controller
                                     name="dayOfBirth"
                                     control={control}
-                                    defaultValue=""
                                     render={({ field: { onChange, value } }) => (
                                         <DesktopDatePicker
-                                            label="Date desktop"
+                                            label="Your birthday"
                                             inputFormat="YYYY/MM/DD"
                                             value={value}
                                             onChange={onChange}
@@ -218,20 +218,21 @@ export const Form = () => {
                             </Grid>
                             <Grid item xs={12} sm={6}>
                                 <Controller
-                                    name="sport"
+                                    name="region"
                                     control={control}
                                     defaultValue=""
                                     render={({ field }) => (
                                         <FormControl fullWidth>
-                                            <InputLabel id="sport-select-label">Sport</InputLabel>
+                                            <InputLabel id="region-select-label">{formDataLoading ? 'Lading...' : 'Region'}</InputLabel>
                                             <Select
                                                 {...field}
-                                                labelId="sport-select-label"
+                                                labelId="region-select-label"
                                                 required
                                                 fullWidth
-                                                label="Sport"
+                                                label="Region"
+                                                disabled={formDataLoading}
                                             >
-                                                {sportsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                {regionsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
                                             </Select>
                                         </FormControl>
                                     )}
@@ -239,151 +240,27 @@ export const Form = () => {
                             </Grid>
                         </Grid>
                     </Box>
-                    <Typography align="center" variant="h5">My weapons</Typography>
-                    <Box sx={{ border: 1, borderRadius: '5px', borderColor: 'grey.700' }} mt={2} mb={2} p={2}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} sm={12}>
-                                <Controller
-                                    name="strength-1"
-                                    control={control}
-                                    defaultValue=""
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Input my strength 1"
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start">1.</InputAdornment>,
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={12}>
-                                <Controller
-                                    name="strength-2"
-                                    control={control}
-                                    defaultValue=""
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Input my strength 2"
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start">2.</InputAdornment>,
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={12}>
-                                <Controller
-                                    name="strength-3"
-                                    control={control}
-                                    defaultValue=""
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Input my strength 3"
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start">3.</InputAdornment>,
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
-                    <Typography align="center" variant="h5">My Work Ons</Typography>
-                    <Box sx={{ border: 1, borderRadius: '5px', borderColor: 'grey.700' }} mt={2} p={2}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} sm={12}>
-                                <Controller
-                                    name="work-ons-1"
-                                    control={control}
-                                    defaultValue=""
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Input my work on 1"
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start">1.</InputAdornment>,
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={12}>
-                                <Controller
-                                    name="work-ons-2"
-                                    control={control}
-                                    defaultValue=""
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Input my work on 2"
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start">2.</InputAdornment>,
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={12}>
-                                <Controller
-                                    name="work-ons-3"
-                                    control={control}
-                                    defaultValue=""
-                                    render={({ field }) => (
-                                        <TextField
-                                            {...field}
-                                            fullWidth
-                                            label="Input my work on 3"
-                                            InputProps={{
-                                                startAdornment: <InputAdornment position="start">3.</InputAdornment>,
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
                     <Box sx={{ textAlign: 'center' }} mt={2} mb={2}>
                         <Grid container>
-                            <Grid item xs={2} className='flex-centered'>
-                                <Typography>Work Ons</Typography>
-                            </Grid>
-                            <Grid item xs={8} className='flex-centered'>
-                                <Typography>Actions</Typography>
-                            </Grid>
-                            <Grid item xs={2}>
-                                <Box><Typography>Self Reflection</Typography></Box>
-                                <Box sx={{ display: 'flex' }}>
-                                    <Box sx={{ flex: 1 }}>Pre</Box>
-                                    <Box sx={{ flex: 1 }}>Post</Box>
-                                </Box>
-                            </Grid>
                             <Grid item xs={12} className='flex-centered' mt={2}>
-                                <Typography align="center" variant="h5">Physical Performance</Typography>
+                                <Typography align="center" variant="h5">Beers Info</Typography>
                             </Grid>
                             <Grid item xs={2} className="flex-centered">
                                 <Controller
-                                    name="ability"
+                                    name="type"
                                     control={control}
                                     defaultValue=""
                                     render={({ field }) => (
                                         <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                                            <InputLabel id="ability-select-label">Ability</InputLabel>
+                                            <InputLabel id="type-select-label">Beer type</InputLabel>
                                             <Select
                                                 {...field}
-                                                labelId="ability-select-label"
+                                                labelId="type-select-label"
                                                 required
                                                 fullWidth
+                                                disabled={!watchRegion}
                                             >
-                                                {physicalPerformanceList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                {beerTypesList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
                                             </Select>
                                         </FormControl>
                                     )}
@@ -391,7 +268,7 @@ export const Form = () => {
                             </Grid>
                             <Grid
                                 item
-                                xs={8}
+                                xs={10}
                                 sx={{
                                     border: 1,
                                     borderColor: 'black',
@@ -402,23 +279,17 @@ export const Form = () => {
                                 }}
                             >
                                 <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
-                                    <Box sx={{ width: '40%' }}><Typography>Exercise</Typography></Box>
-                                    <Box sx={{ width: '20%' }}><Typography>Url</Typography></Box>
-                                    <Box sx={{ width: '40%' }}><Typography>Focus</Typography></Box>
+                                    <Box sx={{ width: '70%' }}><Typography>Name</Typography></Box>
+                                    <Box sx={{ width: '15%' }}><Typography>Degree (%)</Typography></Box>
+                                    <Box sx={{ width: '15%' }}><Typography>Volume (ml)</Typography></Box>
                                 </Box>
-                                {abilitiesExercisesList.map((item, i) => (
+                                {beerDataByTypeAndRegion.map((item, i) => (
                                     <Box key={i} fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
-                                        <Box sx={{ width: '40%' }}><Typography variant="body2" gutterBottom>{item.exercise}</Typography></Box>
-                                        <Box sx={{ width: '20%' }}><Link target="_blank" href={item.url}>Link</Link></Box>
-                                        <Box sx={{ width: '40%' }}><Typography variant="body2" gutterBottom>{item.focus}</Typography></Box>
+                                        <Box sx={{ width: '70%' }}><Typography variant="body2" gutterBottom>{item.name}</Typography></Box>
+                                        <Box sx={{ width: '15%' }}><Typography variant="body2" gutterBottom>{item.degree}</Typography></Box>
+                                        <Box sx={{ width: '15%' }}><Typography variant="body2" gutterBottom>{item.volume}</Typography></Box>
                                     </Box>
                                 ))}
-                            </Grid>
-                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
-                            </Grid>
-                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
                             </Grid>
                             <Grid item xs={12} className="flex-centered" mt={2}>
                                 <Typography align="center" variant="h5">Game Skills</Typography>
