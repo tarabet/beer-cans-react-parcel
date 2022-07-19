@@ -1,15 +1,13 @@
 import {Routes, Route} from "react-router-dom";
 import { Form } from "./components/Form";
-import { History } from "./components/History";
-import { HookForm } from "./components/HookForm";
+import { EmptyPage } from "./components/EmptyPage";
 
 const App = () => {
     return (
         <Routes>
             <Route path="/" element={<Form />} />
             <Route path="form" element={<Form />} />
-            <Route path="hook-form" element={<HookForm />} />
-            <Route path="history" element={<History />} />
+            <Route path="empty" element={<EmptyPage />} />
         </Routes>)
 }
 

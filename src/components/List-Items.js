@@ -1,16 +1,21 @@
 import * as React from 'react';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import HistoryIcon from "@mui/icons-material/History";
+import AppsOutageIcon from '@mui/icons-material/AppsOutage';
 
 export const menuItems = [
     {
         url: "/form",
         IconComponent: <AssignmentIcon />,
-        text: "Form"
+        text: "BEER CANS FORM"
     },
     {
-        url: "/history",
-        IconComponent: <HistoryIcon />,
-        text: "History"
-    }
+        url: "/empty",
+        IconComponent: <AppsOutageIcon />,
+        text: "SOME ITEM"
+    },
+    {
+        url: "/empty",
+        IconComponent: <AppsOutageIcon />,
+        text: "SOME ITEM"
+    },
 ]

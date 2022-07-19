@@ -1,66 +1,26 @@
 import { useRef } from "react";
 
 import axios from "axios";
-import flatten from 'lodash/flatten'
 
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import {
-    Button,
-    CircularProgress,
     FormControl,
-    InputAdornment,
     InputLabel,
     MenuItem,
     Select,
-    TextField
+    TextField, Tooltip
 } from "@mui/material";
 import { useForm, Controller} from "react-hook-form";
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import {useEffect, useState} from "react";
-import Link from "@mui/material/Link";
 
 // Set necessary url in .env file
 // Is not stored in codebase for security reasons (public repo)
-const FORM_DATA_URL = process.env.FORM_DATA_URL;
-const FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL = process.env.FORM_PHYSICAL_PERFORMANCE_EXERCISES_URL;
 const FORM_DATA_TEST_URL = process.env.FORM_DATA_TEST_URL;
 
 const yearsList = [ 7, 8, 9, 10, 11, 12 ]
-
-const dynamicExercisesList = [
-    {
-        exercise: 'Jump',
-        url: 'https://google.com',
-        focus: 'strength'
-    },
-    {
-        exercise: 'Run',
-        url: 'https://google.com',
-        focus: 'speed'
-    },
-    {
-        exercise: 'Swim',
-        url: 'https://google.com',
-        focus: 'stamina'
-    },
-    {
-        exercise: 'Jump',
-        url: 'https://google.com',
-        focus: 'strength'
-    },
-    {
-        exercise: 'Run',
-        url: 'https://google.com',
-        focus: 'speed'
-    },
-    {
-        exercise: 'Swim',
-        url: 'https://google.com',
-        focus: 'stamina'
-    },
-]
 
 const getUniqueList = (formData, columnName) => {
     return formData.reduce((acc, item, index) => {
@@ -78,8 +38,12 @@ const getUniqueList = (formData, columnName) => {
 
 const getSecondLevelUniqueList = (formData, firstLevelFilterColumn, firstLevelFilterValue, columnToFilter) => {
     return formData.reduce((acc, itemArr) => {
-        if (itemArr[firstLevelFilterColumn] === firstLevelFilterValue && acc.indexOf(itemArr[columnToFilter]) === -1) {
-            acc.push(itemArr[columnToFilter])
+        if (
+            itemArr[firstLevelFilterColumn] === firstLevelFilterValue
+            && !!itemArr[columnToFilter]
+            && acc.indexOf(itemArr[columnToFilter]) === -1
+            ) {
+                acc.push(itemArr[columnToFilter])
         }
 
         return acc;
@@ -91,6 +55,22 @@ const buildBeerTypeByRegionDataList = (formData, region, type) => {
         const beerData = {};
 
         if (item['Region'] === region && item['Type'] === type) {
+            beerData['name'] = item['Name'];
+            beerData['degree'] = item['Degree (%)'];
+            beerData['volume'] = item['Volume (ml)'];
+
+            acc.push(beerData);
+        }
+
+        return acc;
+    }, [])
+}
+
+const buildBeerDataByCollaborator = (formData, collaborator) => {
+    return formData.reduce((acc, item) => {
+        const beerData = {};
+
+        if (item['Colaborator'] === collaborator) {
             beerData['name'] = item['Name'];
             beerData['degree'] = item['Degree (%)'];
             beerData['volume'] = item['Volume (ml)'];
@@ -116,18 +96,25 @@ export const Form = () => {
     const { handleSubmit, reset, watch, formState, control, getValues } = useForm();
     const onSubmit = data => console.log(data);
 
-    const { region, type } = getValues();
+    const { region, type, collaborator } = getValues();
 
     // Save previous values to trigger re-fetch if value really changed
-    const prevValues = usePrevious({ prevRegionValue: region, prevTypeValue: type });
+    const prevValues = usePrevious({
+        prevCollaboratorValue: collaborator,
+        prevRegionValue: region,
+        prevTypeValue: type
+    });
 
     const [formDataLoading, setFormDataLoading] = useState(true);
     const [formData, setFormData] = useState(null);
     const [regionsList, setRegionsList] = useState([]);
     const [beerTypesList, setBeerTypesList] = useState([]);
+    const [collaboratorsList, setCollaboratorsList] = useState([]);
+    const [beersByCollaborator, setBeersByCollaborator] = useState([]);
     const [beerDataByTypeAndRegion, setBeerDataByTypeAndRegion] = useState([]);
     const [classificationList, setClassificationList] = useState([]);
 
+    const watchCollaborator = watch('collaborator');
     const watchType = watch('type');
     const watchRegion = watch('region');
 
@@ -146,7 +133,7 @@ export const Form = () => {
 
     useEffect(() => {
         if (prevValues) {
-            const { prevRegionValue, prevTypeValue } = prevValues;
+            const { prevRegionValue, prevTypeValue, prevCollaboratorValue } = prevValues;
 
             if (!!watchType && watchType !== prevTypeValue) {
                 setBeerDataByTypeAndRegion(buildBeerTypeByRegionDataList(formData, watchRegion, watchType));
@@ -154,13 +141,16 @@ export const Form = () => {
 
             if (!!watchRegion && watchRegion !== prevRegionValue) {
                 setBeerTypesList(getSecondLevelUniqueList(formData, 'Region', watchRegion, 'Type'))
+                setCollaboratorsList(getSecondLevelUniqueList(formData, 'Region', watchRegion, 'Colaborator'))
+            }
+
+            if (!!watchCollaborator && watchCollaborator !== prevCollaboratorValue) {
+                setBeersByCollaborator(buildBeerDataByCollaborator(formData, watchCollaborator))
             }
         }
-    }, [ watchType, watchRegion ]);
+    }, [ watchCollaborator, watchType, watchRegion ]);
 
-    console.log("Watch:", watch());
-    console.log("FormData:", formData);
-    console.log("beerDataByTypeAndRegion", beerDataByTypeAndRegion);
+    console.log("BeersByColl:", beersByCollaborator)
 
     return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -224,26 +214,32 @@ export const Form = () => {
                                     render={({ field }) => (
                                         <FormControl fullWidth>
                                             <InputLabel id="region-select-label">{formDataLoading ? 'Lading...' : 'Region'}</InputLabel>
-                                            <Select
-                                                {...field}
-                                                labelId="region-select-label"
-                                                required
-                                                fullWidth
-                                                label="Region"
-                                                disabled={formDataLoading}
+                                            <Tooltip
+                                                open={watchRegion === ""}
+                                                arrow
+                                                title="Choose region to begin"
                                             >
-                                                {regionsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
-                                            </Select>
+                                                <Select
+                                                    {...field}
+                                                    labelId="region-select-label"
+                                                    required
+                                                    fullWidth
+                                                    label="Region"
+                                                    disabled={formDataLoading}
+                                                >
+                                                    {regionsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                </Select>
+                                            </Tooltip>
                                         </FormControl>
                                     )}
-                                    />
+                                />
                             </Grid>
                         </Grid>
                     </Box>
                     <Box sx={{ textAlign: 'center' }} mt={2} mb={2}>
                         <Grid container>
                             <Grid item xs={12} className='flex-centered' mt={2}>
-                                <Typography align="center" variant="h5">Beers Info</Typography>
+                                <Typography align="center" mb={2} variant="h5">Beers Info</Typography>
                             </Grid>
                             <Grid item xs={2} className="flex-centered">
                                 <Controller
@@ -252,7 +248,7 @@ export const Form = () => {
                                     defaultValue=""
                                     render={({ field }) => (
                                         <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                                            <InputLabel id="type-select-label">Beer type</InputLabel>
+                                            <InputLabel id="type-select-label">{!watchRegion ? 'Waiting...' : 'Beer type'}</InputLabel>
                                             <Select
                                                 {...field}
                                                 labelId="type-select-label"
@@ -266,123 +262,57 @@ export const Form = () => {
                                     )}
                                 />
                             </Grid>
-                            <Grid
-                                item
-                                xs={10}
-                                sx={{
-                                    border: 1,
-                                    borderColor: 'black',
-                                    display: "flex",
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'column'
-                                }}
-                            >
-                                <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
+                            <Grid item xs={10} sx={{ borderColor: 'black', display: "flex", alignItems: 'center', flexDirection: 'column'}}>
+                                <Box fullWidth sx={{ width: 1, display: 'flex', borderBottom: 1 }}>
                                     <Box sx={{ width: '70%' }}><Typography>Name</Typography></Box>
                                     <Box sx={{ width: '15%' }}><Typography>Degree (%)</Typography></Box>
                                     <Box sx={{ width: '15%' }}><Typography>Volume (ml)</Typography></Box>
                                 </Box>
                                 {beerDataByTypeAndRegion.map((item, i) => (
-                                    <Box key={i} fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
+                                    <Box key={i} fullWidth sx={{ width: 1, display: 'flex', borderBottom: 1, borderColor: 'grey.300' }}>
                                         <Box sx={{ width: '70%' }}><Typography variant="body2" gutterBottom>{item.name}</Typography></Box>
                                         <Box sx={{ width: '15%' }}><Typography variant="body2" gutterBottom>{item.degree}</Typography></Box>
                                         <Box sx={{ width: '15%' }}><Typography variant="body2" gutterBottom>{item.volume}</Typography></Box>
                                     </Box>
                                 ))}
                             </Grid>
-                            <Grid item xs={12} className="flex-centered" mt={2}>
-                                <Typography align="center" variant="h5">Game Skills</Typography>
+                            <Grid item xs={12} className="flex-centered" mt={6}>
+                                <Typography align="center" variant="h5">Collaborator Info</Typography>
                             </Grid>
                             <Grid item className="flex-centered" xs={2} sx={{ flexDirection: 'column' }}>
                                 <Box className="flex-centered" sx={{ flex: 1, width: 1 }}>
                                     <Controller
-                                        name="classification"
+                                        name="collaborator"
                                         control={control}
                                         defaultValue=""
                                         render={({ field }) => (
                                             <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                                                <InputLabel id="classification-select-label">Classification</InputLabel>
+                                                <InputLabel id="collaborator-select-label">{!watchRegion ? 'Waiting...' : 'Author'}</InputLabel>
                                                 <Select
                                                     {...field}
-                                                    labelId="classification-select-label"
-                                                    required
+                                                    labelId="collaborator-select-label"
                                                     fullWidth
                                                 >
-                                                    {classificationList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
-                                                </Select>
-                                            </FormControl>
-                                        )}
-                                    />
-                                </Box>
-                                <Box className="flex-centered" sx={{ flex: 1, width: 1 }}>
-                                    <Controller
-                                        name="quality"
-                                        control={control}
-                                        defaultValue=""
-                                        render={({ field }) => (
-                                            <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-                                                <InputLabel id="quality-select-label">Quality</InputLabel>
-                                                <Select
-                                                    {...field}
-                                                    labelId="quality-select-label"
-                                                    required
-                                                    fullWidth
-                                                >
-                                                    {classificationList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+                                                    {collaboratorsList.map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}
                                                 </Select>
                                             </FormControl>
                                         )}
                                     />
                                 </Box>
                             </Grid>
-                            <Grid item className="flex-centered" xs={8} sx={{ flexDirection: 'column'}}>
-                                <Box fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
-                                    <Box sx={{ width: '25%' }}><Typography>Exercise</Typography></Box>
-                                    <Box sx={{ width: '50%' }}><Typography>Url</Typography></Box>
-                                    <Box sx={{ width: '25%' }}><Typography>Focus</Typography></Box>
+                            <Grid item xs={10} sx={{ borderColor: 'black', display: "flex", alignItems: 'center', flexDirection: 'column'}}>
+                                <Box fullWidth sx={{ width: 1, display: 'flex', borderBottom: 1 }}>
+                                    <Box sx={{ width: '70%' }}><Typography>Name</Typography></Box>
+                                    <Box sx={{ width: '15%' }}><Typography>Degree (%)</Typography></Box>
+                                    <Box sx={{ width: '15%' }}><Typography>Volume (ml)</Typography></Box>
                                 </Box>
-                                {dynamicExercisesList.map((item, i) => (
-                                    <Box key={i} fullWidth sx={{ width: 1, display: 'flex', border: 1 }}>
-                                        <Box sx={{ width: '25%' }}><Typography>{item.exercise}</Typography></Box>
-                                        <Box sx={{ width: '50%' }}><Typography>{item.url}</Typography></Box>
-                                        <Box sx={{ width: '25%' }}><Typography>{item.focus}</Typography></Box>
+                                {beersByCollaborator.map((item, i) => (
+                                    <Box key={i} fullWidth sx={{ width: 1, display: 'flex', borderBottom: 1, borderColor: 'grey.300' }}>
+                                        <Box sx={{ width: '70%' }}><Typography variant="body2" gutterBottom>{item.name}</Typography></Box>
+                                        <Box sx={{ width: '15%' }}><Typography variant="body2" gutterBottom>{item.degree}</Typography></Box>
+                                        <Box sx={{ width: '15%' }}><Typography variant="body2" gutterBottom>{item.volume}</Typography></Box>
                                     </Box>
                                 ))}
-                            </Grid>
-                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
-                            </Grid>
-                            <Grid item xs={1} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
-                            </Grid>
-                            <Grid item xs={12} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography align="center" variant="h5">Athlete Attitudes</Typography>
-                            </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
-                            </Grid>
-                            <Grid
-                                item
-                                xs={6}
-                                sx={{
-                                    border: 1,
-                                    borderColor: 'black',
-                                    display: "flex",
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexDirection: 'column'
-                                }}
-                            >
-                                <Box sx={{ width: 1, border: 1, height: '64px' }}><Typography>1. Textarea</Typography></Box>
-                                <Box sx={{ width: 1, border: 1, height: '64px' }}><Typography>1. Textarea</Typography></Box>
-                                <Box sx={{ width: 1, border: 1, height: '64px' }}><Typography>1. Textarea</Typography></Box>
-                            </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
-                            </Grid>
-                            <Grid item xs={2} sx={{ border: 1, borderColor: 'black', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
-                                <Typography>Dropdown</Typography>
                             </Grid>
                         </Grid>
                     </Box>
